@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axiosInstance from "../api/axiosInstance";
 import {
   Container,
   Typography,
@@ -23,8 +24,9 @@ import {
   CircularProgress,
   Box,
   CssBaseline,
+  Chip,
+  Stack,
 } from "@mui/material";
-import axios from "axios";
 
 import Header from "../component/Header";
 import Footer from "../component/Footer";
@@ -32,6 +34,14 @@ import Footer from "../component/Footer";
 const categories = ["Bug", "Feature", "Improvement"];
 const priorities = ["Low", "Medium", "High"];
 const statuses = ["Todo", "In Progress", "Completed", "Expired"];
+
+// Status colors mapping
+const statusColors = {
+  Todo: "default",
+  "In Progress": "info",
+  Completed: "success",
+  Expired: "error",
+};
 
 export default function ManagerDashboard() {
   const [tasks, setTasks] = useState([]);
@@ -44,10 +54,14 @@ export default function ManagerDashboard() {
     priority: "Medium",
     dueDate: "",
     status: "Todo",
-    assignedTo: "",
+    assignedToId: "",
   });
   const [users, setUsers] = useState([]);
   const [alert, setAlert] = useState({ open: false, severity: "info", message: "" });
+
+  // For "View More" dialog
+  const [viewTaskOpen, setViewTaskOpen] = useState(false);
+  const [viewTask, setViewTask] = useState(null);
 
   useEffect(() => {
     fetchTasks();
@@ -57,18 +71,21 @@ export default function ManagerDashboard() {
   const fetchTasks = async () => {
     setLoadingTasks(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/tasks");
+      const res = await axiosInstance.get("/task/tasks");
       setTasks(res.data);
     } catch {
       setTasks([
         {
-          id: 1,
+          _id: "1",
           title: "Fix login bug",
           category: "Bug",
           priority: "High",
           dueDate: "2025-06-10",
           status: "Todo",
-          assignedTo: "John Doe",
+          assignedTo: { name: "John Doe" },
+          description: "Fix issue with login redirect",
+          createdAt: "2025-05-01T12:00:00Z",
+          comments: "Urgent fix required",
         },
       ]);
     }
@@ -77,16 +94,20 @@ export default function ManagerDashboard() {
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/users");
+      const res = await axiosInstance.get("/user/fetchmembers");
       setUsers(res.data);
     } catch {
-      setUsers([{ id: "u1", name: "John Doe" }, { id: "u2", name: "Jane Smith" }]);
+      // fallback or handle error
     }
   };
 
   const handleOpenTaskDialog = (task = null) => {
     if (task) {
-      setTaskForm({ ...task });
+      setTaskForm({
+        ...task,
+        assignedToId: task.assignedTo?._id || "",
+        dueDate: task.dueDate ? task.dueDate.split("T")[0] : "",
+      });
     } else {
       setTaskForm({
         title: "",
@@ -95,7 +116,7 @@ export default function ManagerDashboard() {
         priority: "Medium",
         dueDate: "",
         status: "Todo",
-        assignedTo: "",
+        assignedToId: "",
       });
     }
     setTaskDialogOpen(true);
@@ -111,11 +132,11 @@ export default function ManagerDashboard() {
 
   const handleTaskSubmit = async () => {
     try {
-      if (taskForm.id) {
-        await axios.put(`http://localhost:5000/api/tasks/${taskForm.id}`, taskForm);
+      if (taskForm._id) {
+        await axiosInstance.put(`/task/tasks/${taskForm._id}`, taskForm);
         setAlert({ open: true, severity: "success", message: "Task updated" });
       } else {
-        await axios.post("http://localhost:5000/api/tasks", taskForm);
+        await axiosInstance.post("/task/create", taskForm);
         setAlert({ open: true, severity: "success", message: "Task created" });
       }
       fetchTasks();
@@ -127,6 +148,17 @@ export default function ManagerDashboard() {
         message: err.response?.data?.message || "Failed to save task",
       });
     }
+  };
+
+  // Open "View More" dialog
+  const handleViewMore = (task) => {
+    setViewTask(task);
+    setViewTaskOpen(true);
+  };
+
+  const handleCloseViewTask = () => {
+    setViewTaskOpen(false);
+    setViewTask(null);
   };
 
   return (
@@ -160,22 +192,29 @@ export default function ManagerDashboard() {
                   <TableCell>Due Date</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>Assigned To</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  <TableCell align="center">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {tasks.map((t) => (
-                  <TableRow key={t.id}>
+                  <TableRow key={t._id}>
                     <TableCell>{t.title}</TableCell>
                     <TableCell>{t.category}</TableCell>
                     <TableCell>{t.priority}</TableCell>
-                    <TableCell>{t.dueDate}</TableCell>
-                    <TableCell>{t.status}</TableCell>
-                    <TableCell>{t.assignedTo}</TableCell>
-                    <TableCell align="right">
-                      <Button size="small" onClick={() => handleOpenTaskDialog(t)}>
-                        Edit
-                      </Button>
+                    <TableCell>{new Date(t.dueDate).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Chip label={t.status} color={statusColors[t.status]} />
+                    </TableCell>
+                    <TableCell>{t.assignedTo?.name || "-"}</TableCell>
+                    <TableCell align="center">
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <Button size="small" onClick={() => handleOpenTaskDialog(t)}>
+                          Edit
+                        </Button>
+                        <Button size="small" onClick={() => handleViewMore(t)}>
+                          View More
+                        </Button>
+                      </Stack>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -184,9 +223,9 @@ export default function ManagerDashboard() {
           </Paper>
         )}
 
-        {/* Task Dialog */}
+        {/* Task Create/Edit Dialog */}
         <Dialog open={taskDialogOpen} onClose={handleCloseTaskDialog} maxWidth="sm" fullWidth>
-          <DialogTitle>{taskForm.id ? "Edit Task" : "Create Task"}</DialogTitle>
+          <DialogTitle>{taskForm._id ? "Edit Task" : "Create Task"}</DialogTitle>
           <DialogContent>
             <TextField
               label="Title"
@@ -241,7 +280,8 @@ export default function ManagerDashboard() {
               onChange={handleTaskChange}
             />
 
-            <FormControl fullWidth margin="normal">
+            {/* Status selector is disabled on creation for now */}
+            {/* <FormControl fullWidth margin="normal">
               <InputLabel>Status</InputLabel>
               <Select name="status" value={taskForm.status} onChange={handleTaskChange}>
                 {statuses.map((s) => (
@@ -250,16 +290,16 @@ export default function ManagerDashboard() {
                   </MenuItem>
                 ))}
               </Select>
-            </FormControl>
+            </FormControl> */}
 
             <FormControl fullWidth margin="normal">
               <InputLabel>Assign To</InputLabel>
-              <Select name="assignedTo" value={taskForm.assignedTo} onChange={handleTaskChange}>
+              <Select name="assignedToId" value={taskForm.assignedToId} onChange={handleTaskChange}>
                 <MenuItem value="">
                   <em>None</em>
                 </MenuItem>
                 {users.map((u) => (
-                  <MenuItem key={u.id} value={u.name}>
+                  <MenuItem key={u._id} value={u._id}>
                     {u.name}
                   </MenuItem>
                 ))}
@@ -270,8 +310,53 @@ export default function ManagerDashboard() {
           <DialogActions>
             <Button onClick={handleCloseTaskDialog}>Cancel</Button>
             <Button variant="contained" onClick={handleTaskSubmit}>
-              {taskForm.id ? "Update" : "Create"}
+              {taskForm._id ? "Update" : "Create"}
             </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* View More Task Dialog */}
+        <Dialog open={viewTaskOpen} onClose={handleCloseViewTask} maxWidth="sm" fullWidth>
+          <DialogTitle>Task Details</DialogTitle>
+          <DialogContent dividers>
+            {viewTask && (
+              <>
+                <Typography variant="h6" gutterBottom>
+                  {viewTask.title}
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom>
+                  <strong>Category:</strong> {viewTask.category}
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom>
+                  <strong>Priority:</strong> {viewTask.priority}
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom>
+                  <strong>Status:</strong>{" "}
+                  <Chip label={viewTask.status} color={statusColors[viewTask.status]} size="small" />
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom>
+                  <strong>Due Date:</strong> {new Date(viewTask.dueDate).toLocaleDateString()}
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom>
+                  <strong>Assigned To:</strong> {viewTask.assignedTo?.name || "-"}
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom>
+                  <strong>Created At:</strong>{" "}
+                  {new Date(viewTask.createdAt).toLocaleString()}
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                  <strong>Description:</strong> <br />
+                  {viewTask.description || "-"}
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                  <strong>Comments:</strong> <br />
+                  {viewTask.comments || "-"}
+                </Typography>
+              </>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseViewTask}>Close</Button>
           </DialogActions>
         </Dialog>
 
@@ -279,6 +364,7 @@ export default function ManagerDashboard() {
           open={alert.open}
           autoHideDuration={4000}
           onClose={() => setAlert({ ...alert, open: false })}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
         >
           <Alert
             onClose={() => setAlert({ ...alert, open: false })}
