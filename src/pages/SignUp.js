@@ -153,14 +153,14 @@ export default function SignUp() {
                         }}
                     />
 
-                    {/* <TextField
-            fullWidth
-            margin="normal"
-            name="token"
-            label="Invite Token"
-            value={form.token}
-            onChange={handleChange}
-          /> */}
+                    <TextField
+                        fullWidth
+                        margin="normal"
+                        name="token"
+                        label="Invite Token"
+                        value={form.token}
+                        onChange={handleChange}
+                    />
 
                     <Button
                         fullWidth

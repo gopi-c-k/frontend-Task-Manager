@@ -21,8 +21,13 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
+  Box,
+  CssBaseline,
 } from "@mui/material";
 import axios from "axios";
+
+import Header from "../component/Header";
+import Footer from "../component/Footer";
 
 const categories = ["Bug", "Feature", "Improvement"];
 const priorities = ["Low", "Medium", "High"];
@@ -52,7 +57,6 @@ export default function ManagerDashboard() {
   const fetchTasks = async () => {
     setLoadingTasks(true);
     try {
-      // Replace with your API
       const res = await axios.get("http://localhost:5000/api/tasks");
       setTasks(res.data);
     } catch {
@@ -73,7 +77,6 @@ export default function ManagerDashboard() {
 
   const fetchUsers = async () => {
     try {
-      // Replace with your API for users to assign tasks to
       const res = await axios.get("http://localhost:5000/api/users");
       setUsers(res.data);
     } catch {
@@ -109,11 +112,9 @@ export default function ManagerDashboard() {
   const handleTaskSubmit = async () => {
     try {
       if (taskForm.id) {
-        // Update existing task
         await axios.put(`http://localhost:5000/api/tasks/${taskForm.id}`, taskForm);
         setAlert({ open: true, severity: "success", message: "Task updated" });
       } else {
-        // Create new task
         await axios.post("http://localhost:5000/api/tasks", taskForm);
         setAlert({ open: true, severity: "success", message: "Task created" });
       }
@@ -129,155 +130,167 @@ export default function ManagerDashboard() {
   };
 
   return (
-    <Container sx={{ my: 4 }}>
-      <Typography variant="h4" mb={3}>
-        Manager Dashboard
-      </Typography>
+    <>
+      <CssBaseline />
+      <Header userName="Manager" />
 
-      <Button variant="contained" sx={{ mb: 2 }} onClick={() => handleOpenTaskDialog()}>
-        Create Task
-      </Button>
+      <Container sx={{ my: 4, minHeight: "80vh" }}>
+        <Typography variant="h4" mb={3} align="center">
+          Dashboard
+        </Typography>
 
-      {loadingTasks ? (
-        <CircularProgress />
-      ) : (
-        <Paper>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Priority</TableCell>
-                <TableCell>Due Date</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Assigned To</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {tasks.map((t) => (
-                <TableRow key={t.id}>
-                  <TableCell>{t.title}</TableCell>
-                  <TableCell>{t.category}</TableCell>
-                  <TableCell>{t.priority}</TableCell>
-                  <TableCell>{t.dueDate}</TableCell>
-                  <TableCell>{t.status}</TableCell>
-                  <TableCell>{t.assignedTo}</TableCell>
-                  <TableCell align="right">
-                    <Button size="small" onClick={() => handleOpenTaskDialog(t)}>
-                      Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Paper>
-      )}
-
-      {/* Task Dialog */}
-      <Dialog open={taskDialogOpen} onClose={handleCloseTaskDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>{taskForm.id ? "Edit Task" : "Create Task"}</DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Title"
-            name="title"
-            fullWidth
-            margin="normal"
-            value={taskForm.title}
-            onChange={handleTaskChange}
-          />
-          <TextField
-            label="Description"
-            name="description"
-            fullWidth
-            margin="normal"
-            multiline
-            rows={3}
-            value={taskForm.description}
-            onChange={handleTaskChange}
-          />
-
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Category</InputLabel>
-            <Select name="category" value={taskForm.category} onChange={handleTaskChange}>
-              {categories.map((c) => (
-                <MenuItem key={c} value={c}>
-                  {c}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Priority</InputLabel>
-            <Select name="priority" value={taskForm.priority} onChange={handleTaskChange}>
-              {priorities.map((p) => (
-                <MenuItem key={p} value={p}>
-                  {p}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <TextField
-            label="Due Date"
-            name="dueDate"
-            type="date"
-            fullWidth
-            margin="normal"
-            InputLabelProps={{ shrink: true }}
-            value={taskForm.dueDate}
-            onChange={handleTaskChange}
-          />
-
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Status</InputLabel>
-            <Select name="status" value={taskForm.status} onChange={handleTaskChange}>
-              {statuses.map((s) => (
-                <MenuItem key={s} value={s}>
-                  {s}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Assign To</InputLabel>
-            <Select name="assignedTo" value={taskForm.assignedTo} onChange={handleTaskChange}>
-              <MenuItem value="">
-                <em>None</em>
-              </MenuItem>
-              {users.map((u) => (
-                <MenuItem key={u.id} value={u.name}>
-                  {u.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </DialogContent>
-
-        <DialogActions>
-          <Button onClick={handleCloseTaskDialog}>Cancel</Button>
-          <Button variant="contained" onClick={handleTaskSubmit}>
-            {taskForm.id ? "Update" : "Create"}
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+          <Button variant="contained" onClick={() => handleOpenTaskDialog()}>
+            Create Task
           </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
 
-      <Snackbar
-        open={alert.open}
-        autoHideDuration={4000}
-        onClose={() => setAlert({ ...alert, open: false })}
-      >
-        <Alert
+        {loadingTasks ? (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Paper elevation={3}>
+            <Table size="small" sx={{ minWidth: 650 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Title</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Priority</TableCell>
+                  <TableCell>Due Date</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Assigned To</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {tasks.map((t) => (
+                  <TableRow key={t.id}>
+                    <TableCell>{t.title}</TableCell>
+                    <TableCell>{t.category}</TableCell>
+                    <TableCell>{t.priority}</TableCell>
+                    <TableCell>{t.dueDate}</TableCell>
+                    <TableCell>{t.status}</TableCell>
+                    <TableCell>{t.assignedTo}</TableCell>
+                    <TableCell align="right">
+                      <Button size="small" onClick={() => handleOpenTaskDialog(t)}>
+                        Edit
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Paper>
+        )}
+
+        {/* Task Dialog */}
+        <Dialog open={taskDialogOpen} onClose={handleCloseTaskDialog} maxWidth="sm" fullWidth>
+          <DialogTitle>{taskForm.id ? "Edit Task" : "Create Task"}</DialogTitle>
+          <DialogContent>
+            <TextField
+              label="Title"
+              name="title"
+              fullWidth
+              margin="normal"
+              value={taskForm.title}
+              onChange={handleTaskChange}
+              required
+            />
+            <TextField
+              label="Description"
+              name="description"
+              fullWidth
+              margin="normal"
+              multiline
+              rows={3}
+              value={taskForm.description}
+              onChange={handleTaskChange}
+            />
+
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Category</InputLabel>
+              <Select name="category" value={taskForm.category} onChange={handleTaskChange}>
+                {categories.map((c) => (
+                  <MenuItem key={c} value={c}>
+                    {c}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Priority</InputLabel>
+              <Select name="priority" value={taskForm.priority} onChange={handleTaskChange}>
+                {priorities.map((p) => (
+                  <MenuItem key={p} value={p}>
+                    {p}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="Due Date"
+              name="dueDate"
+              type="date"
+              fullWidth
+              margin="normal"
+              InputLabelProps={{ shrink: true }}
+              value={taskForm.dueDate}
+              onChange={handleTaskChange}
+            />
+
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Status</InputLabel>
+              <Select name="status" value={taskForm.status} onChange={handleTaskChange}>
+                {statuses.map((s) => (
+                  <MenuItem key={s} value={s}>
+                    {s}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Assign To</InputLabel>
+              <Select name="assignedTo" value={taskForm.assignedTo} onChange={handleTaskChange}>
+                <MenuItem value="">
+                  <em>None</em>
+                </MenuItem>
+                {users.map((u) => (
+                  <MenuItem key={u.id} value={u.name}>
+                    {u.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </DialogContent>
+
+          <DialogActions>
+            <Button onClick={handleCloseTaskDialog}>Cancel</Button>
+            <Button variant="contained" onClick={handleTaskSubmit}>
+              {taskForm.id ? "Update" : "Create"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={alert.open}
+          autoHideDuration={4000}
           onClose={() => setAlert({ ...alert, open: false })}
-          severity={alert.severity}
-          sx={{ width: "100%" }}
         >
-          {alert.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+          <Alert
+            onClose={() => setAlert({ ...alert, open: false })}
+            severity={alert.severity}
+            sx={{ width: "100%" }}
+          >
+            {alert.message}
+          </Alert>
+        </Snackbar>
+      </Container>
+
+      <Footer />
+    </>
   );
 }

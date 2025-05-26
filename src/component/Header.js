@@ -32,7 +32,7 @@ export default function Header({ userName }) {
         </Typography>
 
         <IconButton color="inherit" sx={{ mr: 2 }}>
-          <Badge badgeContent={3} color="error">
+          <Badge badgeContent={0} color="error">
             <NotificationsIcon />
           </Badge>
         </IconButton>
